@@ -11,12 +11,21 @@
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item" style="padding-right: 20px;">
-                <a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register</a>
-            </li>
-            <li class="nav-item active" style="padding-right: 20px;">
-                <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('login') }}" style="color: coral;">Login<span class="sr-only">(current)</span></a></div>
-            </li>
+            {% if current_user.is_authenticated %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
+                </li>
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('logout') }}" style="color: coral;">Logout</a>
+                </li>
+            {% else %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register</a>
+                </li>
+                <li class="nav-item active" style="padding-right: 20px;">
+                    <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('login') }}" style="color: coral;">Login<span class="sr-only">(current)</span></a></div>
+                </li>
+            {% endif %}
         </ul>
     </div>
 {% endblock navbar_links %}
@@ -24,7 +33,50 @@
 {% block main %}
     
     <div class="container">
-        <h2 style="color: coral;">HelpDart</h2>
+        <div class="text-center">
+            <h2 style="color: coral;">Login</h2>
+            <hr>
+        </div>
+        <div style="padding-top: 50px;">
+            <form method="POST" action="" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                <fieldset class="form-group">
+                    <div class="form-group">
+                        {{ form.email.label(class="form-control-label") }}
+                        {% if form.email.errors %}
+                            {{ form.email(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.email.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ form.email(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.password.label(class="form-control-label") }}
+                        {% if form.password.errors %}
+                            {{ form.password(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.password.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ form.password(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </fieldset>
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-info") }}
+                </div>
+                <small class="text-muted">
+                    <a href="#">Forgot Password?</a>
+                    <br>
+                </small>
+            </form>
+        </div>
     </div>
 
 {% endblock main %}

@@ -1,0 +1,138 @@
+{% extends "layout.html" %}
+
+{% block navbar_links %}
+    <div class="collapse navbar-collapse" id="navbarText">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item" style="padding-right: 20px;">
+                <a class="nav-link" href="{{ url_for('home') }}" style="color: coral;">Home</a>
+            </li>
+            <li class="nav-item" style="padding-right: 20px;">
+                <a class="nav-link" href="#" style="color: coral;">Features</a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            {% if current_user.is_authenticated %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
+                </li>
+                {% if current_user.is_organization %}
+                    <li class="nav-item dropdown" style="padding-right: 20px;">
+                        <a style="border-bottom: solid; border-bottom-color: coral; color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Post
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="{{ url_for('post') }}">Create New Post</a>
+                            <a class="dropdown-item" href="{{ url_for('view_posts') }}">View Your Posts</a>
+                        </div>
+                    </li>
+                {% endif %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('logout') }}" style="color: coral;">Logout</a>
+                </li>
+            {% else %}
+                <li class="nav-item active" style="padding-right: 20px;">
+                    <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register<span class="sr-only">(current)</span></a></div>
+                </li>
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('login') }}" style="color: coral;">Login</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+{% endblock navbar_links %}
+
+{% block main %}
+    
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-row align-items-center">
+                <h2 class="mt-1" style="color: coral;">View Your Posts</h2>
+            </div> <a href="{{ url_for('post') }}" type="button" class="text-center btn btn-small btn-info">Create a New Post</a>
+        </div>
+        <hr>
+
+        <div style="padding-bottom: 75px;">
+            <div>
+                {%  if (active_events == "" or active_events == None or active_events == []) and (inactive_events == "" or inactive_events == None or inactive_events == []) %}
+                    <p class="text-muted" style="padding-top: 20px;">
+                        You have not created any posts yet. To create new events, visit the <a href="{{ url_for('post') }}">post creation page</a>.
+                    </p>
+                {% else %}
+                    <div>
+                        <h4 style="padding-top: 30px;">Currently Active Events</h4>
+                        <div>
+                            {%  if active_events == "" or active_events == None or active_events == [] %}
+                                <p class="text-muted" style="padding-top: 20px;">
+                                    You do not have any currently active events. To create new events, visit the <a href="{{ url_for('post') }}">post creation page</a>.
+                                </p>
+                            {% else %}
+                                {% for a_event in active_events %}
+                                    <div class="row" style="padding-top: 50px;">
+                                        <div class="col-md-12">
+                                            <div class="card text-center">
+                                                <div class="card-header">
+                                                    {{ a_event.event_location }}
+                                                </div>
+                                                <div class="card-body">
+                                                    <h5 class="card-title" style="padding: 10px;">{{ a_event.event_name }}</h5>
+                                                    <p class="card-text" style="padding: 10px;"><b style="padding-right: 10px;">{{ a_event.for_display_event_datetime }}</b>   |   <span class="text-success" style="padding-left: 10px;">{{ a_event.days_until_event }} days until event</span></p>
+                                                    
+                                                    <p class="card-text" style="padding-top: 10px;"><b>Brief Description:</b><br>{{ a_event.event_description }}</p>
+                                                    <p class="card-text"><b>Max Number of Volunteers:</b><br>{{ a_event.event_max_volunteers }}</p>
+                                                    <p class="card-text" style="padding-bottom: 10px;"><b>Category:</b><br>{{ a_event.event_category }}</p>
+                                                    <form method="POST" action="" enctype="multipart/form-data">
+                                                        <input id="edit_post_btn" name="edit_post_btn" type="hidden" value="{{ a_event.id }}">
+                                                        {{ editbtnform.editbtn(class="btn btn-warning") }}
+                                                    </form>
+                                                </div>
+                                                <div class="card-footer text-body-secondary">
+                                                    <p>Posted On: {{ a_event.for_display_post_datetime }}</p>
+                                                    <p>Last Updated: {{ a_event.last_updated }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p style="padding-top: 20px;"></p><hr>
+                    <div>
+                        <h4 style="padding-top: 30px;">Inactive/Past Events</h4>
+                        <div>
+                            {%  if inactive_events == "" or inactive_events == None or inactive_events == [] %}
+                                <p class="text-muted" style="padding-top: 20px;">
+                                    You do not have any past events. To create new events, visit the <a href="{{ url_for('post') }}">post creation page</a>.
+                                </p>
+                            {% else %}
+                                {% for ina_event in inactive_events %}
+                                    <div class="row" style="padding-top: 50px;">
+                                        <div class="col-md-12">
+                                            <div class="card text-center">
+                                                <div class="card-header">
+                                                    {{ ina_event.event_location }}
+                                                </div>
+                                                <div class="card-body">
+                                                    <h5 class="card-title" style="padding: 10px;">{{ ina_event.event_name }}</h5>
+                                                    <p class="card-text" style="padding: 10px;"><b style="padding-right: 10px;">{{ ina_event.for_display_event_datetime }}</b>   |   <span class="text-warning" style="padding-left: 10px;">{{ ina_event.days_until_event }} days ago</span></p>
+                                                    
+                                                    <p class="card-text" style="padding-top: 10px;"><b>Brief Description:</b><br>{{ ina_event.event_description }}</p>
+                                                    <p class="card-text"><b>Max Number of Volunteers:</b><br>{{ ina_event.event_max_volunteers }}</p>
+                                                    <p class="card-text" style="padding-bottom: 10px;"><b>Category:</b><br>{{ ina_event.event_category }}</p>
+                                                </div>
+                                                <div class="card-footer text-body-secondary">
+                                                    Posted on: {{ ina_event.for_display_post_datetime }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+{% endblock main %}

@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+
+{% block navbar_links %}
+    <div class="collapse navbar-collapse" id="navbarText">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item" style="padding-right: 20px;">
+                <a class="nav-link" href="{{ url_for('home') }}" style="color: coral;">Home</a>
+            </li>
+            <li class="nav-item" style="padding-right: 20px;">
+                <a class="nav-link" href="#" style="color: coral;">Features</a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto" >
+            {% if current_user.is_authenticated %}
+                <li class="nav-item active" style="padding-right: 20px;">
+                    <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account<span class="sr-only">(current)</span></a></div>
+                </li>
+                {% if current_user.is_organization %}
+                    <li class="nav-item dropdown" style="padding-right: 20px;">
+                        <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Post
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="{{ url_for('post') }}">Create New Post</a>
+                            <a class="dropdown-item" href="{{ url_for('view_posts') }}">View Your Posts</a>
+                        </div>
+                    </li>
+                {% endif %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('logout') }}" style="color: coral;">Logout</a>
+                </li>
+            {% else %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register</a>
+                </li>
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('login') }}" style="color: coral;">Login</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+{% endblock navbar_links %}
+
+{% block main %}
+    
+    <div class="container">
+        <div class="mt-5">
+            <div class="media">
+                <figure>
+                    <img class="rounded-circle" src="{{ url_for('static', filename='images/default_user.jpg') }}" style="width: 125px; height: 125px;">
+                    <figcaption>
+                        <p class="mt-3 text-center">
+                            {% if current_user.is_organization %}
+                                <small class="text-success">Organization Account</small>
+                            {% endif %}
+                        </p>
+                    </figcaption>
+                </figure>
+                <div class="media-body">
+                    <div class="ml-4" style="padding-left: 30px;">
+                        <h2 class="account-heading">{{ current_user.full_name }}</h2>
+                        <p class="text-secondary">{{ current_user.email }}</p>
+                        <p class="text-secondary">
+                            <a style="color: white;" class="btn btn-info" href="{{ url_for('home') }}">Go to Home</a>
+                        </p>
+                        <p class="text-secondary">
+                            <a style="color: black;" class="btn btn-warning" href="{{ url_for('logout') }}">Logout</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <hr>
+        </div>
+        <div>
+            <div class="text-left">
+                <h2 style="color: coral; padding-top: 30px;">Update Account Information</h2>
+                <hr>
+            </div>
+            <div style="padding-top: 35px;">
+                <form method="POST" action="" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <fieldset class="form-group">
+                        <div class="form-group">
+                            {{ form.fullname.label(class="form-control-label") }}
+                            {% if form.fullname.errors %}
+                                {{ form.fullname(class="form-control form-control-lg is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.fullname.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.fullname(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            {{ form.email.label(class="form-control-label") }}
+                            {% if form.email.errors %}
+                                {{ form.email(class="form-control form-control-lg is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.email(class="form-control form-control-lg") }}
+                            {% endif %}
+                        </div>
+                    </fieldset>
+                    <div class="form-group">
+                        {{ form.submit(class="btn btn-info") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+{% endblock main %}

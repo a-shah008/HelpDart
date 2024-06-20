@@ -1,0 +1,176 @@
+{% extends "layout.html" %}
+
+{% block navbar_links %}
+    <div class="collapse navbar-collapse" id="navbarText">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item" style="padding-right: 20px;">
+                <a class="nav-link" href="{{ url_for('home') }}" style="color: coral;">Home</a>
+            </li>
+            <li class="nav-item" style="padding-right: 20px;">
+                <a class="nav-link" href="#" style="color: coral;">Features</a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            {% if current_user.is_authenticated %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
+                </li>
+                {% if current_user.is_organization %}
+                    <li class="nav-item dropdown" style="padding-right: 20px;">
+                        <a style="border-bottom: solid; border-bottom-color: coral; color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Post
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="{{ url_for('post') }}">Create New Post</a>
+                            <a class="dropdown-item" href="{{ url_for('view_posts') }}">View Your Posts</a> 
+                        </div>
+                    </li>
+                {% endif %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('logout') }}" style="color: coral;">Logout</a>
+                </li>
+            {% else %}
+                <li class="nav-item active" style="padding-right: 20px;">
+                    <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register<span class="sr-only">(current)</span></a></div>
+                </li>
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('login') }}" style="color: coral;">Login</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+{% endblock navbar_links %}
+
+{% block main %}
+    
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-row align-items-center">
+                <h2 class="mt-1" style="color: coral;">Edit Post</h2>
+            </div> <span><span><a href="{{ url_for('post') }}" type="button" class="text-center btn btn-small btn-success">Create a New Post</a></span><span  style="padding-left: 25px;"><a href="{{ url_for('view_posts') }}" type="button" class="text-center btn btn-small btn-info">View Posts</a></span></span>
+        </div>
+        <hr>
+
+        <div style="padding-bottom: 75px;">
+            <form method="POST" action="" enctype="multipart/form-data" style="padding-top: 30px;">
+                {{ form.hidden_tag() }}
+                <fieldset class="form-group">
+
+                    <div class="row" style="padding: 5px;">
+                        <div class="col-6" style="padding: 5px;">
+                            <div class="form-group">
+                                {{ form.name.label(class="form-control-label") }}
+                                {% if form.name.errors %}
+                                    {{ form.name(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.name.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.name(class="form-control form-control-lg") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-3" style="padding: 5px; padding-left: 100px;">
+                            <div class="form-group">
+                                {{ form.startdate.label(class="form-control-label") }}<br>
+                                <input id="post_startdate" name="post_startdate" type="date" value="{{ post_startdate }}"/>
+        
+                            </div>
+                        </div>
+
+                        <div class="col-3" style="padding: 5px; padding-left: 100px;">
+                            <div class="form-group">
+                                {{ form.enddate.label(class="form-control-label") }}<br>
+                                <input id="post_enddate" name="post_enddate" type="date" value="{{ post_enddate }}"/>
+        
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" style="padding: 5px;">
+                        <div class="col-3" style="padding: 5px;">
+                            <div class="form-group">
+                                {{ form.starttime.label(class="form-control-label") }}<br>
+                                <input id="post_starttime" name="post_starttime" type="time" value="{{ post_starttime }}">
+                            </div>
+                        </div>
+                        <div class="col-3" style="padding: 5px;">
+                            <div class="form-group">
+                                {{ form.endtime.label(class="form-control-label") }}<br>
+                                <input id="post_endtime" name="post_endtime" type="time" value="{{ post_endtime }}">
+                            </div>
+                        </div>
+                        <div class="col-6" style="padding: 5px;">
+                            <div class="form-group">
+                                {{ form.location.label(class="form-control-label") }}
+                                {% if form.location.errors %}
+                                    {{ form.location(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.location.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.location(class="form-control form-control-lg") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" style="padding: 5px;">
+                        <div class="col-6" style="padding: 5px;">
+                            <div class="form-group">
+                                {{ form.max_volunteers.label(class="form-control-label") }}
+                                {% if form.max_volunteers.errors %}
+                                    {{ form.max_volunteers(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.max_volunteers.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.max_volunteers(class="form-control form-control-lg") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-6" style="padding: 5px;">
+                            <div class="form-group">
+                                {{ form.category.label(class="form-control-label") }}
+                                {% if form.category.errors %}
+                                    {{ form.category(class="form-control form-control-lg is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.category.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.category(class="form-control form-control-lg") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        {{ form.description.label(class="form-control-label") }}
+                        {% if form.description.errors %}
+                            {{ form.description(class="form-control form-control-lg is-invalid") }}
+                            <div class="invalid-feedback">
+                                {% for error in form.description.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ form.description(class="form-control form-control-lg") }}
+                        {% endif %}
+                    </div>
+                </fieldset>
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-info") }}
+                </div>
+            </form>
+        </div>
+    </div>
+
+{% endblock main %}

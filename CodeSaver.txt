@@ -1,0 +1,196 @@
+@app.route("/", methods=["GET", "POST"])    
+@app.route("/home", methods=["GET", "POST"])
+def home():
+    to_show_events = []
+    homesearchform = HomeSearchForm()
+
+    if request.method == "POST":
+        if homesearchform.validate_on_submit():
+            location_input = homesearchform.location_search.data
+            category_input = homesearchform.category_dropdown.data
+
+            if location_input == "" and category_input == "Pick a category...":
+                flash("Please search for a specific location or pick a category. Please try again.", "warning")
+                return redirect(url_for("home"))
+            
+            if location_input != "" and category_input != "Pick a category...":
+                searched_for_locations = get_searched_for_locations(location_input)
+                print(searched_for_locations)
+                for loc in searched_for_locations:
+                    new_event = Event.query.filter_by(event_location=str(loc), event_category=str(category_input)).first()
+                    if new_event != None or new_event != "":
+                        to_show_events.append(new_event)
+
+                if to_show_events == None or to_show_events == []:
+                    flash("There are currently no events that match your search. Please try again later.", "warning")
+                    return redirect(url_for("home"))
+
+            if location_input != "" and category_input == "Pick a category...":
+                searched_for_locations = get_searched_for_locations(location_input)
+                for loc in searched_for_locations:
+                    new_event = Event.query.filter_by(event_location=str(loc)).first()
+                    if new_event != None or new_event != "":
+                        to_show_events.append(new_event)
+
+                if to_show_events == None or to_show_events == []:
+                    flash("There are currently no events that match your search. Please try again later.", "warning")
+                    return redirect(url_for("home"))
+
+            if location_input == "" and category_input != "Pick a category...":
+                to_show_events = Event.query.filter_by(event_category=category_input).all()
+                
+                if to_show_events == None or to_show_events == []:
+                    flash("There are currently no events that match your search. Please try again later.", "warning")
+                    return redirect(url_for("home"))
+        
+        return render_template("home.html", to_show_events=to_show_events, homesearchform=homesearchform)
+
+    elif request.method == "GET":
+        all_events = Event.query.all()
+
+        return render_template("home.html", all_events=all_events, homesearchform=homesearchform)
+
+
+
+
+class HomeSearchForm(FlaskForm):
+    location_search = StringField("Location: ")
+    category_dropdown = SelectField("Category:", choices=list(["Pick a category..."] + event_categories))
+
+    submit = SubmitField("Search")
+
+def get_all_locations():
+    all_locations = []
+    for event in Event.query.all():
+        all_locations.append(event.event_location)
+
+    return all_locations
+
+def get_searched_for_locations(location_input):
+    searched_for_locations = []
+    all_locations_list = get_all_locations()
+    for i in all_locations_list:
+        if (fuzz.ratio(str(location_input).lower(), str(i).lower())) >= 41:
+            searched_for_locations.append(i)
+
+    return searched_for_locations
+
+
+
+
+<p class="h5" style="padding: 25px;">Get started by searching for a location and/or category to see events in that area/categorization!</p>
+            <div style="padding-top: 15px; padding-bottom: 5px;">
+                <form method="POST" action="" enctype="multipart/form-data">
+                    {{ homesearchform.hidden_tag() }}
+                    <div class="row row-cols-2 justify-content-center" style="padding: 5px;">
+                        <div class="col-4 text-center">
+                            Search by Location:
+                        </div>
+                        <div class="col-4 text-center">
+                            Search by Specific Category:
+                        </div>
+                    </div>
+                    <div class="row row-cols-2 justify-content-center" style="padding: 25px; padding-top: 15px;">
+                        <div class="col-4">
+                            {% if homesearchform.location_search.errors %}
+                                {{ homesearchform.location_search(class="form-control form-control-lg is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in homesearchform.location_search.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ homesearchform.location_search(class="text-center form-control form-control-md", placeholder="Search...") }}
+                            {% endif %}
+                        </div>
+                        <div class="col-4">
+                            {% if homesearchform.category_dropdown.errors %}
+                                {{ form.homesearchform(class="form-control form-control-lg is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.homesearchform.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ homesearchform.category_dropdown(class="text-center form-control form-control-md") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row justify-content-center" style="padding-top: 20px;">
+                        <div class="col-4 text-center">
+                            <div class="form-group">
+                                {{ homesearchform.submit(class="btn btn-outline-success") }}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <hr>
+            <div>
+                {% if to_show_events != None or to_show_events != [] or to_show_events != "" %}
+                    <div class="text-center h5" style="padding-top: 30px; padding-left: 30px; padding-right: 30px;">
+                        Your Search Results
+                        <hr>
+                    </div>
+                    <div style="padding-bottom: 100px;">    
+                        {% for event in to_show_events %}
+                            <div class="row" style="padding-top: 50px;">
+                                <div class="col-md-12">
+                                    <div class="card text-center">
+                                        <div class="card-header">
+                                            {{ event.event_location }}
+                                        </div>
+                                        <div class="card-body">
+                                            <h5 class="card-title" style="padding: 10px;">{{ event.event_name }}</h5>
+                                            <p class="card-text" style="padding: 10px;"><b style="padding-right: 10px;">{{ event.for_display_event_datetime }}</b>   |   <span class="text-success" style="padding-left: 10px;">{{ event.days_until_event }} days until event</span></p>
+                                            
+                                            <p class="card-text" style="padding-top: 10px;"><b>Brief Description:</b><br>{{ event.event_description }}</p>
+                                            <p class="card-text"><b>Number of Volunteers Range:</b><br>{{ event.event_ideal_num_of_volunteers }}</p>
+                                            <p class="card-text" style="padding-bottom: 10px;"><b>Category:</b><br>{{ event.event_category }}</p>
+                                        </div>
+                                        <div class="card-footer text-body-secondary">
+                                            <p>Posted On: {{ event.for_display_post_datetime }}</p>
+                                            <p>Last Updated: {{ event.last_updated }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {% if all_events != None or all_events != [] %}
+                        <div class="text-center h5" style="padding-top: 30px; padding-left: 30px; padding-right: 30px;">
+                            Browse All Events
+                            <hr>
+                        </div>
+                        <div style="padding-bottom: 100px;">    
+                            {% for event in all_events %}
+                                <div class="row" style="padding-top: 50px;">
+                                    <div class="col-md-12">
+                                        <div class="card text-center">
+                                            <div class="card-header">
+                                                {{ event.event_location }}
+                                            </div>
+                                            <div class="card-body">
+                                                <h5 class="card-title" style="padding: 10px;">{{ event.event_name }}</h5>
+                                                <p class="card-text" style="padding: 10px;"><b style="padding-right: 10px;">{{ event.for_display_event_datetime }}</b>   |   <span class="text-success" style="padding-left: 10px;">{{ event.days_until_event }} days until event</span></p>
+                                                
+                                                <p class="card-text" style="padding-top: 10px;"><b>Brief Description:</b><br>{{ event.event_description }}</p>
+                                                <p class="card-text"><b>Number of Volunteers Range:</b><br>{{ event.event_ideal_num_of_volunteers }}</p>
+                                                <p class="card-text" style="padding-bottom: 10px;"><b>Category:</b><br>{{ event.event_category }}</p>
+                                            </div>
+                                            <div class="card-footer text-body-secondary">
+                                                <p>Posted On: {{ event.for_display_post_datetime }}</p>
+                                                <p>Last Updated: {{ event.last_updated }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted">There are currently no events in our database. Please try again later.</p>
+                    {% endif %}
+                {% endif %}    
+            </div>
+        </div>

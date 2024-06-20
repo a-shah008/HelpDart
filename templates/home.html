@@ -11,12 +11,32 @@
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item" style="padding-right: 20px;">
-                <a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register</a>
-            </li>
-            <li class="nav-item" style="padding-right: 20px;">
+            {% if current_user.is_authenticated %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
+                </li>
+                {% if current_user.is_organization %}
+                    <li class="nav-item dropdown" style="padding-right: 20px;">
+                        <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Post
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="{{ url_for('post') }}">Create New Post</a>
+                            <a class="dropdown-item" href="{{ url_for('view_posts') }}">View Your Posts</a>
+                        </div>
+                    </li>
+                {% endif %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('logout') }}" style="color: coral;">Logout</a>
+                </li>
+            {% else %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register</a>
+                </li>
+                <li class="nav-item" style="padding-right: 20px;">
                     <a class="nav-link" href="{{ url_for('login') }}" style="color: coral;">Login</a>
-            </li>
+                </li>
+            {% endif %}
         </ul>
     </div>
 {% endblock navbar_links %}
@@ -24,7 +44,19 @@
 {% block main %}
     
     <div class="container">
-        <h2 style="color: coral;">HelpDart</h2>
+        <div class="text-center">
+            <h2 style="color: coral;">HelpDart</h2>
+            <hr>
+        </div>
+        <div class="text-center">
+            <p class="h5" style="padding: 20px;">All Events</p>
+            <div style="padding-left: 75px; padding-right: 75px;"><hr></div>
+        </div>
+        <div>
+            {% for event in all_events %}
+
+            {% endfor %}
+        </div>
     </div>
 
 {% endblock main %}
