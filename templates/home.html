@@ -7,7 +7,7 @@
                 <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('home') }}" style="color: coral;">Home<span class="sr-only">(current)</span></a></div>
             </li>
             <li class="nav-item" style="padding-right: 20px;">
-                    <a class="nav-link" href="#" style="color: coral;">Features</a>
+                    <a class="nav-link" href="{{ url_for('organizations') }}" style="color: coral;">Organizations</a>
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
@@ -52,11 +52,36 @@
             <p class="h5" style="padding: 20px;">All Events</p>
             <div style="padding-left: 75px; padding-right: 75px;"><hr></div>
         </div>
-        <div>
+        <div class="row">
             {% for event in all_events %}
-
+                <div class="col-md-6" style="padding: 30px;">
+                    <div class="card text-center">
+                        <div class="card-header">
+                            <ul class="nav nav-pills card-header-pills justify-content-center">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#">View Organization</a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ event.event_name }}</h5>
+                            <p class="card-text">{{ event.event_category }}</p>
+                            <p class="card-text" style="padding: 10px;"><b style="padding-right: 10px;">{{ event.for_display_event_datetime }}</b><br><span class="text-success" style="padding-left: 10px;">{{ event.days_until_event }} days until event</span></p>
+                            
+                            {% if current_user.is_organization == False %}
+                                <div style="padding-right: 20px; padding-left: 10px;">
+                                    <form method="POST" action="" enctype="multipart/form-data">
+                                        <input id="signupforeventbtn" name="signupforeventbtn" type="hidden" value="{{ event.id }}">
+                                        {{ sign_up_form.signup(class="btn btn-success") }}
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             {% endfor %}
         </div>
+        
     </div>
 
 {% endblock main %}

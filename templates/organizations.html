@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+
+{% block navbar_links %}
+    <div class="collapse navbar-collapse" id="navbarText">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active" style="padding-right: 20px;">
+                <div style="color: coral;"><a class="nav-link" href="{{ url_for('home') }}" style="color: coral;">Home<span class="sr-only">(current)</span></a></div>
+            </li>
+            <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('organizations') }}" style="border-bottom: solid; border-bottom-color: coral; color: coral;">Organizations</a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            {% if current_user.is_authenticated %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
+                </li>
+                {% if current_user.is_organization %}
+                    <li class="nav-item dropdown" style="padding-right: 20px;">
+                        <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Post
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="{{ url_for('post') }}">Create New Post</a>
+                            <a class="dropdown-item" href="{{ url_for('view_posts') }}">View Your Posts</a>
+                        </div>
+                    </li>
+                {% endif %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('logout') }}" style="color: coral;">Logout</a>
+                </li>
+            {% else %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register</a>
+                </li>
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('login') }}" style="color: coral;">Login</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+{% endblock navbar_links %}
+
+{% block main %}
+    
+    <div class="container">
+        <div class="text-center" style="padding-top: 30px;">
+            <span class="h2" style="padding-right: 30px; color: coral;">Organizations</span><span class="text-muted">currently in our database</span>
+            <hr>
+        </div>
+        {% for org in all_organization_objs %}
+            <div style="padding-top: 40px;">
+                <div class="card">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <img src="{{ org.image }}" class="rounded-start" style="height: 100vh; width: 100vw; overflow: hidden; width: 100%; height: 100%; object-fit: cover;" alt="Organization image">
+                        </div> 
+                        <div class="col-md-8">
+                            <div class="card-body">
+                                <span class="h5" style="padding-top: 10px; padding-right: 20px;">{{ org.organization_name }}</span><span><small class="text-muted">{{ org.primary_location }}</small></span>
+                                <p class="card-text" style="padding-top: 10px;">{{ org.email_contact }} <b>|</b> {{ org.phonenumber_contact }}</p>
+                                <p class="card-text" style="padding-top: 10px;">Mission Statement: {{ org.mission_statement }}</p>                     
+                                <p class="card-text" style="padding-top: 10px;">Website Link: <a href="{{ org.website_link }}" target="_blank">{{ org.website_link }}</a></p>                     
+                                <!-- <form method="POST" action="" enctype="multipart/form-data">
+                                    <span style="padding-right: 15px;">
+                                        <input type="submit" class="btn btn-info" id="edit_organization_info" name="edit_organization_info" value="Edit Information">
+                                    </span>
+                                    <span style="padding-right: 15px;">
+                                        <input type="submit" class="btn btn-warning" id="remove_from_organization" name="remove_from_organization" value="Remove Myself from this Organization">
+                                    </span>
+                                    <span>
+                                        <input type="submit" class="btn btn-danger" id="delete_organization" name="delete_organization" value="Delete Organization">
+                                    </span>
+                                </form> -->
+                            </div>
+                        </div>
+                    </div>  
+                </div>
+            </div>
+        {% endfor %}
+        
+    </div>
+
+{% endblock main %}

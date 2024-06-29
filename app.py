@@ -2,12 +2,16 @@ from flask import Flask, render_template, flash, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, EmailField, PasswordField, SubmitField, TextAreaField, SelectField, DateField, TimeField
+from wtforms import StringField, EmailField, PasswordField, SubmitField, TextAreaField, SelectField
+from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import InputRequired, ValidationError
 from email_validator import validate_email, EmailNotValidError
 from datetime import date, datetime
 import bcrypt
 from fuzzywuzzy import fuzz, process
+import secrets
+import os
+from PIL import Image
 
 db = SQLAlchemy()
 
@@ -37,9 +41,15 @@ def load_user(user_id):
 @app.route("/", methods=["GET", "POST"])    
 @app.route("/home", methods=["GET", "POST"])
 def home():
-    all_events = Event.query.all()
+    check_for_not_active_events()
+    all_events = Event.query.filter_by(is_active=True).all()
+    sign_up_form = EventSignUpForm()
 
-    return render_template("home.html", all_events=all_events)
+    if request.method == "POST":
+        if sign_up_form.validate_on_submit():
+            print(request.form.get("signupforeventbtn"))
+
+    return render_template("home.html", all_events=all_events, sign_up_form=sign_up_form)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -54,8 +64,13 @@ def login():
             if user_email in signed_up_user_emails:
                 if bcrypt.checkpw(user_password.encode("utf-8"), Client.query.filter_by(email=user_email).first().password):
                     login_user(Client.query.filter_by(email=user_email).first())
-                    flash("You have been successfully logged in.", "success")
-                    return redirect(url_for("home"))
+
+                    if current_user.is_organization == True and current_user.answered_organization_questions == False:
+                        flash("Please fill out the following information about your organization.", "info")
+                        return redirect(url_for("orginfo", user_id=current_user.id))
+                    else:
+                        flash("You have been successfully logged in.", "success")
+                        return redirect(url_for("home"))
                 else:
                     flash("Incorrect password, please try again.", "warning")
                     return redirect(url_for("login"))
@@ -92,15 +107,90 @@ def register():
             db.session.add(new_user)
             db.session.commit()
             login_user(Client.query.filter_by(email=user_email).first())
-            flash("You have been successfully registered!", "success")
-            return redirect(url_for("home"))
+            if user_is_organization == True:
+                random_hex = secrets.token_hex(16)
+                flash("Your account has been created. Please fill out the following information about your organization.", "info")
+                return redirect(url_for("orginfo", user_id=new_user.id))
+            else:
+                flash("You have been successfully registered!", "success")
+                return redirect(url_for("home"))
 
     return render_template("register.html", form=form)
+
+@app.route("/orginfo/<user_id>/", methods=["GET", "POST"])
+@login_required
+def orginfo(user_id):
+    form = OrganizationInforForm()
+    user_obj = Client.query.filter_by(id=user_id).first()
+    page_intro_msg = ""
+
+    if user_obj.is_authenticated == True:
+
+        if user_obj.answered_organization_questions == False:
+            page_intro_msg = "Please answer the following questions about your organization."
+
+            if request.method == "POST":
+                if form.validate_on_submit():
+                    picture_file = save_picture(form.org_image.data)
+
+                    new_org_info_obj = Organization(organization_name=form.organization_name.data, primary_location= form.primary_location.data, mission_statement= form.mission_statement.data, email_contact= form.email_contact.data, phonenumber_contact= form.phonenumber_contact.data, website_link= form.website_link.data, image=(f"{app.root_path[51:]}\static\images\{picture_file}"))
+                    db.session.add(new_org_info_obj)
+                    db.session.commit()
+                    current_user.answered_organization_questions = True
+                    current_user.organization_id = new_org_info_obj.id
+                    db.session.commit()
+                    
+                    flash("Your organization information has been saved.", "success")
+                    return redirect(url_for("account"))
+
+            return render_template("orginfo.html", form=form, user_obj=user_obj, page_intro_msg=page_intro_msg)
+        
+        else:
+            organization_obj = Organization.query.filter_by(id=current_user.organization_id).first()
+
+            if request.method == "GET":
+
+                form.organization_name.data = organization_obj.organization_name
+                form.primary_location.data = organization_obj.primary_location
+                form.mission_statement.data = organization_obj.mission_statement
+                form.email_contact.data = organization_obj.email_contact
+                form.phonenumber_contact.data = organization_obj.phonenumber_contact
+                form.website_link.data = organization_obj.website_link
+                form.org_image.data = organization_obj.image
+
+                page_intro_msg = "You have already provided information regarding your organization. You may edit that information now."
+
+            elif request.method == "POST":
+                organization_obj.organization_name = form.organization_name.data
+                organization_obj.primary_location = form.primary_location.data
+                organization_obj.mission_statement = form.mission_statement.data
+                organization_obj.email_contact = form.email_contact.data
+                organization_obj.phonenumber_contact = form.phonenumber_contact.data
+                organization_obj.website_link = form.website_link.data
+
+                if form.org_image.data == None:
+                    organization_obj.image = organization_obj.image
+                else:
+                    organization_obj.image = f"{app.root_path[51:]}\static\images\{save_picture(form.org_image.data)}"
+
+                db.session.commit()
+                flash("Your organization information has been successfully updated.", "success")
+                return redirect(url_for("account"))
+            
+            return render_template("orginfo.html", form=form, user_obj=user_obj, page_intro_msg=page_intro_msg)
+    
+    else:
+        flash("You must be an organization administrator to access this page.", "warning")
+        return redirect(url_for("home"))
 
 @app.route("/account", methods=["GET", "POST"])
 @login_required
 def account():
     form = UpdateAccountForm()
+    user_organization_obj = None
+
+    if current_user.is_organization == True:
+        user_organization_obj = Organization.query.filter_by(id=current_user.organization_id).first()
 
     if request.method == "GET":
         form.fullname.data = current_user.full_name
@@ -126,8 +216,38 @@ def account():
             db.session.commit()
             flash("Your account information has been successfully updated!", "success")
             return redirect(url_for("account"))
+        
+        if request.form.get("edit_organization_info"):
+            flash("You may edit information regarding your organization here.", "info")
+            return redirect(url_for("orginfo", user_id=current_user.id))
 
-    return render_template("account.html", form=form)
+        if request.form.get("remove_from_organization"):
+            current_user.is_organization = False
+            current_user.organization_id = None
+            current_user.answered_organization_questions = False
+            db.session.commit()
+            flash(f"You have been successfully removed from {user_organization_obj.organization_name}.", "success")
+            return redirect(url_for("account"))
+        
+        if request.form.get("delete_organization"):
+            db.session.delete(user_organization_obj)
+            current_user.is_organization = False
+            current_user.organization_id = None
+            current_user.answered_organization_questions = False
+            db.session.commit()
+            flash(f"{user_organization_obj.organization_name} has been successsfully deleted.", "success")
+            return redirect(url_for("account"))
+
+    if current_user.is_organization and current_user.answered_organization_questions == True:
+        return render_template("account.html", form=form, user_organization_obj=user_organization_obj)
+    else:
+        return render_template("account.html", form=form, user_organization_obj=user_organization_obj)
+
+@app.route("/organizations", methods=["GET", "POST"])
+def organizations():
+    all_organization_objs = get_all_organization_objs()
+
+    return render_template("organizations.html", all_organization_objs=all_organization_objs)
 
 @app.route("/post", methods=["GET", "POST"])
 @login_required
@@ -226,7 +346,8 @@ class Client(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True)
     password = db.Column(db.String(60))
 
-    events = db.relationship("Event", backref="organizer")
+    answered_organization_questions = db.Column(db.Boolean, default=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
     
     def __repr__(self):
         output = ""
@@ -236,7 +357,24 @@ class Client(db.Model, UserMixin):
             output = ": Customer"
 
         return f"{self.full_name} ({self.email}){output}"
-    
+
+class Organization(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+
+    organization_name = db.Column(db.String(120), default=None)
+    primary_location = db.Column(db.String(120), default=None)
+    mission_statement = db.Column(db.String(240), default=None)
+    email_contact = db.Column(db.String(120), default=None)
+    phonenumber_contact = db.Column(db.String(120), default=None)
+    website_link = db.Column(db.String(120), default=None)
+    image = db.Column(db.String(120), default="default_organization.jpg")
+
+    administrators = db.relationship("Client", backref="administrator")
+    events = db.relationship("Event", backref="event")
+
+    def __repr__(self):
+        return f"\n\n<{self.organization_name}:\nAdministrators:{self.administrators}>\n\n"
+
 class Event(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
 
@@ -249,6 +387,7 @@ class Event(db.Model, UserMixin):
     event_max_volunteers = db.Column(db.String(120))
     event_category = db.Column(db.String(120))
     event_description = db.Column(db.String(120))
+    event_age_range = db.Column(db.String(120))
 
     post_date = db.Column(db.String(120))
     post_time = db.Column(db.String(120))
@@ -258,7 +397,7 @@ class Event(db.Model, UserMixin):
     days_until_event = db.Column(db.String(120))
     last_updated = db.Column(db.String(120))
 
-    organizer_id = db.Column(db.Integer, db.ForeignKey("client.id"))
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
 
     def __repr__(self):
         return f"\n\nPost Information:\n{self.event_name},\n{self.event_startdate} to {self.event_enddate},\n{self.event_starttime} to {self.event_endtime},\n{self.event_location},\n{self.event_ideal_num_of_volunteers},\n{self.event_category},\n{self.event_description}\n\n Metadata:\nCreated: {self.post_date}, {self.post_time}\nOrganized By: {Client.query.filter_by(id=self.organizer_id).first()}\n\n\n"
@@ -321,6 +460,32 @@ class EditPostForm(FlaskForm):
         if category.data == "Pick a category...":
             raise ValidationError("Pick a valid category. Please try again.")
 
+class EventSignUpForm(FlaskForm):
+
+    signup = SubmitField("Sign Up")
+
+class OrganizationInforForm(FlaskForm):
+    organization_name = StringField("Name:", validators=[InputRequired()])
+    primary_location = StringField("Headquarters Location:", validators=[InputRequired()])
+    mission_statement = TextAreaField("Mission Statement:", validators=[InputRequired()])
+    email_contact = StringField("Email:", validators=[InputRequired()])
+    phonenumber_contact = StringField("Phone Number:", validators=[InputRequired()])
+    website_link = StringField("Link to Website Homepage:", validators=[InputRequired()])
+    org_image = FileField("Organization Image:", validators=[FileAllowed(['jpg', 'png'])])
+
+    submit = SubmitField("Save")
+
+def save_picture(form_picture):
+    random_hex = secrets.token_hex(8)
+    _, f_ext = os.path.splitext(form_picture.filename)
+    picture_fn = random_hex + str(f_ext)
+    picture_path = os.path.join(app.root_path, 'static\images', picture_fn)
+    output_size = (500, 500)
+    i = Image.open(form_picture)
+    i.thumbnail(output_size)
+    i.save(picture_path)
+    return picture_fn
+
 def check_email(email, check_deliv):
     boolean_email_msg_return = []
 
@@ -371,6 +536,14 @@ def get_is_organization_value(is_organization_field):
     
     return False
 
+def get_all_organization_objs():
+    all_org_objs = []
+
+    for org in Organization.query.all():
+        all_org_objs.append(org)
+
+    return all_org_objs
+
 def encrypt_password(password):
     new_password = ""
 
@@ -386,9 +559,9 @@ def get_all_emails():
     return all_emails_list
 
 def check_for_not_active_events():
-    if current_user.is_authenticated and current_user.is_organization:
-        all_organizer_events = Event.query.filter_by(organizer_id=current_user.id)
-        for event in all_organizer_events:
+    if current_user.is_authenticated:
+        all_events = Event.query.all()
+        for event in all_events:
             is_active = True
 
             current_time = convertto24(datetime.now().strftime("%I:%M:%S %p"))
@@ -400,8 +573,10 @@ def check_for_not_active_events():
 
             current_datetime = str(datetime(int(current_date[0:4]), int(current_date[5:7]), int(current_date[8:]), int(current_time[0:2]), int(current_time[3:5])))
             event_datetime = str(datetime(int(event_date[0:4]), int(event_date[5:7]), int(event_date[8:]), int(event_time[0:2]), int(event_time[3:5])))
-            
-            if current_datetime > event_datetime:
+
+            event_enddate_datetime = str(datetime(int(event_enddate[0:4]), int(event_enddate[5:7]), int(event_enddate[8:]), int(event.event_endtime[0:2]), int(event.event_endtime[3:5])))
+
+            if (current_datetime > event_datetime) and (current_datetime > event_enddate_datetime):
                 is_active = False
             else:
                 is_active = True
@@ -429,11 +604,6 @@ def check_for_not_active_events():
                 event.last_updated = display_posttime
 
             db.session.commit()
- 
-    else:
-        flash("There was an issue loading the results. Please try again later.", "warning")
-        return redirect(url_for("home"))
-
 
 def convertto24(time_input): 
     if time_input[-2:] == "AM" and time_input[:2] == "12": 
