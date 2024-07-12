@@ -15,7 +15,7 @@
                 <li class="nav-item active" style="padding-right: 20px;">
                     <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account<span class="sr-only">(current)</span></a></div>
                 </li>
-                {% if current_user.is_organization %}
+                {% if current_user.is_organization  and current_user.answered_organization_questions %}
                     <li class="nav-item dropdown" style="padding-right: 20px;">
                         <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Post
@@ -153,13 +153,19 @@
         {% else %}
             {% if current_user.is_organization == True and current_user.answered_organization_questions == False %}
                 <div class="text-left" style="padding-top: 30px;">
-                    <span class="h2" style="padding-right: 30px; color: coral;">My Organization</span><span class="text-muted">You are an administrator for this organization</span>
+                    <span class="h2" style="padding-right: 30px; color: coral;">My Organization</span>
+                    <span class="text-muted">
+                        {% if current_user.answered_organization_questions %}
+                            You are an administrator for this organization
+                        {% else %}
+                            You are not part of any organization yet
+                        {% endif %}
+                    </span>
                     <hr>
                 </div>
-                <p class="text-warning"><b>You still need to fill out information regarding your organization. Click <a href="{{ url_for('orginfo', user_id=current_user.id) }}" target="_blank">here</a> to complete.</b></p>
+                <p class="text-warning">You still need to fill out information regarding your organization. Click <a href="{{ url_for('orginfo', user_id=current_user.id) }}" target="_blank">here</a> to complete.</p>
             {% endif %}
         {% endif %}
-        
     </div>
 
 {% endblock main %}

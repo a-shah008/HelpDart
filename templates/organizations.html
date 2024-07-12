@@ -15,7 +15,7 @@
                 <li class="nav-item" style="padding-right: 20px;">
                     <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
                 </li>
-                {% if current_user.is_organization %}
+                {% if current_user.is_organization and current_user.answered_organization_questions %}
                     <li class="nav-item dropdown" style="padding-right: 20px;">
                         <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Post
@@ -43,7 +43,7 @@
 
 {% block main %}
     
-    <div class="container">
+    <div class="container" style="padding-bottom: 200px;">
         <div class="text-center" style="padding-top: 30px;">
             <span class="h2" style="padding-right: 30px; color: coral;">Organizations</span><span class="text-muted">currently in our database</span>
             <hr>
@@ -57,10 +57,28 @@
                         </div> 
                         <div class="col-md-8">
                             <div class="card-body">
-                                <span class="h5" style="padding-top: 10px; padding-right: 20px;">{{ org.organization_name }}</span><span><small class="text-muted">{{ org.primary_location }}</small></span>
+                                <a id="{{ org.organization_name }}">
+                                    <span class="h5" style="padding-top: 10px; padding-right: 20px;">{{ org.organization_name }}</span>
+                                </a>
+                                <span>
+                                    {% if len(org.website_link) >= 57 %}
+                                        <small class="text-muted"><a href="{{ org.website_link }}" target="_blank">{{ org.website_link[:57] }}...</a></small>
+                                    {% else %}
+                                        <small class="text-muted"><a href="{{ org.website_link }}" target="_blank">{{ org.website_link }}</a></small>
+                                    {% endif %}
+                                </span>
                                 <p class="card-text" style="padding-top: 10px;">{{ org.email_contact }} <b>|</b> {{ org.phonenumber_contact }}</p>
-                                <p class="card-text" style="padding-top: 10px;">Mission Statement: {{ org.mission_statement }}</p>                     
-                                <p class="card-text" style="padding-top: 10px;">Website Link: <a href="{{ org.website_link }}" target="_blank">{{ org.website_link }}</a></p>                     
+                                <p class="card-text" style="padding-top: 10px;"><b>Our Mission:</b> {{ org.mission_statement }}</p>
+                                {% if org.administrators != [] %}
+                                    <p class="card-text" style="padding-top: 5px;">Current Administrators: </p>
+                                    <ul>
+                                        {% for admin in org.administrators %}
+                                            <li>
+                                                {{ admin.full_name }}: <a href="mailto:{{ admin.email }}">{{ admin.email }}</a>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
                                 <!-- <form method="POST" action="" enctype="multipart/form-data">
                                     <span style="padding-right: 15px;">
                                         <input type="submit" class="btn btn-info" id="edit_organization_info" name="edit_organization_info" value="Edit Information">
@@ -74,7 +92,10 @@
                                 </form> -->
                             </div>
                         </div>
-                    </div>  
+                    </div> 
+                    <div class="footer" style="text-align: center; background-color: #ECECEC; padding: 10px;">
+                        {{ org.primary_location }}
+                    </div>
                 </div>
             </div>
         {% endfor %}

@@ -15,7 +15,7 @@
                 <li class="nav-item" style="padding-right: 20px;">
                     <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
                 </li>
-                {% if current_user.is_organization %}
+                {% if current_user.is_organization and current_user.answered_organization_questions %}
                     <li class="nav-item dropdown" style="padding-right: 20px;">
                         <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Post

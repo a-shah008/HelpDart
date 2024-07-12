@@ -7,7 +7,7 @@
                 <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('home') }}" style="color: coral;">Home<span class="sr-only">(current)</span></a></div>
             </li>
             <li class="nav-item" style="padding-right: 20px;">
-                    <a class="nav-link" href="{{ url_for('organizations') }}" style="color: coral;">Organizations</a>
+                <a class="nav-link" href="{{ url_for('organizations') }}" style="color: coral;">Organizations</a>
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
@@ -15,7 +15,7 @@
                 <li class="nav-item" style="padding-right: 20px;">
                     <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
                 </li>
-                {% if current_user.is_organization %}
+                {% if current_user.is_organization and current_user.answered_organization_questions %}
                     <li class="nav-item dropdown" style="padding-right: 20px;">
                         <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Post
@@ -43,7 +43,7 @@
 
 {% block main %}
     
-    <div class="container">
+    <div class="container" style="padding-bottom: 150px;">
         <div class="text-center">
             <h2 style="color: coral;">HelpDart</h2>
             <hr>
@@ -52,16 +52,12 @@
             <p class="h5" style="padding: 20px;">All Events</p>
             <div style="padding-left: 75px; padding-right: 75px;"><hr></div>
         </div>
-        <div class="row">
+        <div class="row justify-content-center">
             {% for event in all_events %}
                 <div class="col-md-6" style="padding: 30px;">
                     <div class="card text-center">
                         <div class="card-header">
-                            <ul class="nav nav-pills card-header-pills justify-content-center">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="#">View Organization</a>
-                                </li>
-                            </ul>
+                            <span style="font-size: large;">{{ (Organization.query.filter_by(id=event.organization_id).first()).organization_name }}</span> <span style="padding-left: 15px;"><small><a href="{{ url_for('organizations') }}#{{ (Organization.query.filter_by(id=event.organization_id).first()).organization_name }}">(View Organization)</a></small></span>
                         </div>
                         <div class="card-body">
                             <h5 class="card-title">{{ event.event_name }}</h5>
@@ -76,6 +72,9 @@
                                     </form>
                                 </div>
                             {% endif %}
+                        </div>
+                        <div class="card-footer">
+
                         </div>
                     </div>
                 </div>

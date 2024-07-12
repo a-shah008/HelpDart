@@ -12,10 +12,12 @@ from fuzzywuzzy import fuzz, process
 import secrets
 import os
 from PIL import Image
+from random import choice
 
 db = SQLAlchemy()
 
 event_categories = ["Animals/Veterinary", "Religious", "Medical", "Military", "Arts/Literature", "Sports", "Youth/Education", "Nature/Outdoors", "Community", "Philanthropy/General", "Other"]
+badge_colors = ["bg-primary", "bg-secondary", "bg-success", "bg-warning", "bg-info", "bg-danger"]
 
 def create_app():
     app = Flask(__name__)
@@ -49,7 +51,7 @@ def home():
         if sign_up_form.validate_on_submit():
             print(request.form.get("signupforeventbtn"))
 
-    return render_template("home.html", all_events=all_events, sign_up_form=sign_up_form)
+    return render_template("home.html", all_events=all_events, sign_up_form=sign_up_form, Organization=Organization)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -131,9 +133,14 @@ def orginfo(user_id):
 
             if request.method == "POST":
                 if form.validate_on_submit():
-                    picture_file = save_picture(form.org_image.data)
+                    if form.org_image.data:
+                        picture_file = save_picture(form.org_image.data)
+                        picture_file = f"{app.root_path[51:]}\static\images\{picture_file}"
+                    else:
+                        flash("Please provide a valid image that represents your organization (image of organization headquarters, organization logo, etc.).", "warning")
+                        return redirect(url_for("orginfo", user_id=current_user.id))
 
-                    new_org_info_obj = Organization(organization_name=form.organization_name.data, primary_location= form.primary_location.data, mission_statement= form.mission_statement.data, email_contact= form.email_contact.data, phonenumber_contact= form.phonenumber_contact.data, website_link= form.website_link.data, image=(f"{app.root_path[51:]}\static\images\{picture_file}"))
+                    new_org_info_obj = Organization(organization_name=form.organization_name.data, primary_location= form.primary_location.data, mission_statement= form.mission_statement.data, email_contact= form.email_contact.data, phonenumber_contact= form.phonenumber_contact.data, website_link= form.website_link.data, image=picture_file)
                     db.session.add(new_org_info_obj)
                     db.session.commit()
                     current_user.answered_organization_questions = True
@@ -247,11 +254,15 @@ def account():
 def organizations():
     all_organization_objs = get_all_organization_objs()
 
-    return render_template("organizations.html", all_organization_objs=all_organization_objs)
+    return render_template("organizations.html", all_organization_objs=all_organization_objs, len=len, type=type, list=list)
 
 @app.route("/post", methods=["GET", "POST"])
 @login_required
 def post():
+    if current_user.answered_organization_questions == False:
+        flash("You are not an administrator for an organization yet. Please fill out information regarding your organization first.", "warning")
+        return redirect(url_for("orginfo", user_id=current_user.id))
+
     form = CreateNewPostForm()
 
     if request.method == "GET":
@@ -268,8 +279,11 @@ def post():
         if (request.form.get("post_startdate") == "" or request.form.get("post_startdate") == None) or (request.form.get("post_enddate") == "" or request.form.get("post_enddate") == None) or (request.form.get("post_starttime") == "" or request.form.get("post_starttime") == None) or (request.form.get("post_endtime") == "" or request.form.get("post_endtime") == None):
             flash("Please enter a valid start/end date/time. Try again.", "warning")
             return redirect(url_for("post"))
+        elif len(string_to_list(form.keywords.data)) > 6 or len(string_to_list(form.keywords.data)) < 1:
+            flash(f"You may enter a max of only 6 keywords. You gave {len(string_to_list(form.keywords.data))}.", "warning")
+            return redirect(url_for("post"))
         else:
-            new_event = Event(event_name=form.name.data, event_startdate=request.form.get("post_startdate"), event_enddate=request.form.get("post_enddate"), event_starttime=request.form.get("post_starttime"), event_endtime=request.form.get("post_endtime"), event_location=form.location.data, event_max_volunteers=form.max_volunteers.data, event_category=form.category.data, event_description=form.description.data, post_date=current_post_date, post_time=current_post_time, organizer_id=current_user.id)
+            new_event = Event(event_name=form.name.data, event_startdate=request.form.get("post_startdate"), event_enddate=request.form.get("post_enddate"), event_starttime=request.form.get("post_starttime"), event_endtime=request.form.get("post_endtime"), event_location=form.location.data, event_max_volunteers=form.max_volunteers.data, event_min_age=form.age_min.data, event_max_age=form.age_max.data, event_category=form.category.data, event_description=form.description.data, event_keywords=form.keywords.data, post_date=current_post_date, post_time=current_post_time, organization_id=current_user.organization_id)
             db.session.add(new_event)
             db.session.commit()
             flash("Event has been successfully posted.", "success")
@@ -278,26 +292,37 @@ def post():
 @app.route("/view_posts", methods=["GET", "POST"])
 @login_required
 def view_posts():
+    if current_user.answered_organization_questions == False:
+        flash("You are not an administrator for an organization yet. Please fill out information regarding your organization first.", "warning")
+        return redirect(url_for("orginfo", user_id=current_user.id))
+
     check_for_not_active_events()
+
     active_events = []
     inactive_events = []
+    list_of_keywords_dicts = get_all_keywords_dicts()
+
     form = EditPostBtn()
 
-    for i in Event.query.filter_by(is_active=True).all():
+    for i in Event.query.filter_by(id=current_user.organization_id, is_active=True).all():
         active_events.append(i)
 
-    for j in Event.query.filter_by(is_active=False).all():
+    for j in Event.query.filter_by(id= current_user.organization_id, is_active=False).all():
         inactive_events.append(j)
 
     if request.method == "POST":
         post_id = request.form.get("edit_post_btn")
         return redirect(url_for("edit_post", post_id=post_id))
 
-    return render_template("view_posts.html", active_events=active_events, inactive_events=inactive_events, editbtnform=form)
+    return render_template("view_posts.html", active_events=active_events, inactive_events=inactive_events, editbtnform=form, list_of_keywords_dicts=list_of_keywords_dicts)
 
 @app.route("/edit_post/<post_id>", methods=["GET", "POST"])
 @login_required
 def edit_post(post_id):
+    if current_user.answered_organization_questions == False:
+        flash("You are not an administrator for an organization yet. Please fill out information regarding your organization first.", "warning")
+        return redirect(url_for("orginfo", user_id=current_user.id))
+    
     form = EditPostForm()
     post_obj = Event.query.filter_by(id=post_id).first()
 
@@ -309,8 +334,11 @@ def edit_post(post_id):
         post_endtime = post_obj.event_endtime
         form.location.data = post_obj.event_location
         form.max_volunteers.data = post_obj.event_max_volunteers
+        form.age_min.data = post_obj.event_min_age
+        form.age_max.data = post_obj.event_max_age
         form.category.data = post_obj.event_category
         form.description.data = post_obj.event_description
+        form.keywords.data = post_obj.event_keywords
     elif request.method == "POST":
         post_obj.event_name = form.name.data
         post_obj.event_startdate = request.form.get("post_startdate")
@@ -319,8 +347,15 @@ def edit_post(post_id):
         post_obj.event_endtime = request.form.get("post_endtime")
         post_obj.event_location = form.location.data
         post_obj.event_max_volunteers = form.max_volunteers.data
+        post_obj.event_min_age = form.age_min.data
+        post_obj.event_max_age = form.age_max.data
         post_obj.event_category = form.category.data
         post_obj.event_description = form.description.data
+        if len(string_to_list(form.keywords.data)) > 6 or len(string_to_list(form.keywords.data)) < 1:
+            flash(f"You may enter a max of only 6 keywords. You gave {len(string_to_list(form.keywords.data))}.", "warning")
+            return redirect(url_for("post"))
+        else:
+            post_obj.event_keywords = form.keywords.data
 
         post_obj.last_updated = str(datetime.now().date().strftime("%b %d, %Y")) + " at " + str(datetime.now().time().strftime("%I:%M:%S %p"))
 
@@ -385,9 +420,12 @@ class Event(db.Model, UserMixin):
     event_endtime = db.Column(db.String(120))
     event_location = db.Column(db.String(120))
     event_max_volunteers = db.Column(db.String(120))
+    event_min_age = db.Column(db.String(120))
+    event_max_age = db.Column(db.String(120))
     event_category = db.Column(db.String(120))
     event_description = db.Column(db.String(120))
     event_age_range = db.Column(db.String(120))
+    event_keywords = db.Column(db.String(620))
 
     post_date = db.Column(db.String(120))
     post_time = db.Column(db.String(120))
@@ -430,8 +468,11 @@ class CreateNewPostForm(FlaskForm):
     endtime = StringField("Event End Time:", validators=[InputRequired()])
     location = StringField("Event Location:", validators=[InputRequired()])
     max_volunteers = StringField("Max Number of Volunteers:", validators=[InputRequired()])
+    age_min = StringField("Age Range:", validators=[InputRequired()])
+    age_max = StringField(None, validators=[InputRequired()])
     category = SelectField("Category:", choices=list(["Pick a category..."] + event_categories))
     description = TextAreaField("Brief Description:", validators=[InputRequired()])
+    keywords = StringField("Keywords (each separated by a comma):", validators=[InputRequired()])
 
     submit = SubmitField("Save")
 
@@ -451,8 +492,11 @@ class EditPostForm(FlaskForm):
     endtime = StringField("Event End Time:", validators=[InputRequired()])
     location = StringField("Event Location:", validators=[InputRequired()])
     max_volunteers = StringField("Max Number of Volunteers:", validators=[InputRequired()])
+    age_min = StringField("Age Range:", validators=[InputRequired()])
+    age_max = StringField(None, validators=[InputRequired()])
     category = SelectField("Category:", choices=list(["Pick a category..."] + event_categories))
     description = TextAreaField("Brief Description:", validators=[InputRequired()])
+    keywords = StringField("Keywords (each separated by a comma):", validators=[InputRequired()])
 
     submit = SubmitField("Save")
 
@@ -466,7 +510,7 @@ class EventSignUpForm(FlaskForm):
 
 class OrganizationInforForm(FlaskForm):
     organization_name = StringField("Name:", validators=[InputRequired()])
-    primary_location = StringField("Headquarters Location:", validators=[InputRequired()])
+    primary_location = StringField("Headquarters Location (city, state):", validators=[InputRequired()])
     mission_statement = TextAreaField("Mission Statement:", validators=[InputRequired()])
     email_contact = StringField("Email:", validators=[InputRequired()])
     phonenumber_contact = StringField("Phone Number:", validators=[InputRequired()])
@@ -485,6 +529,24 @@ def save_picture(form_picture):
     i.thumbnail(output_size)
     i.save(picture_path)
     return picture_fn
+
+def get_keywords_dict(list_of_keywords):
+    kws_dict = {}
+    item_num = 0
+
+    for i in list_of_keywords:
+        kws_dict[str(i)] = badge_colors[item_num]
+        item_num += 1
+
+    return kws_dict
+
+def get_all_keywords_dicts():
+    end_list = []
+    
+    for e in Event.query.filter_by(organization_id=current_user.organization_id):
+        end_list.append(get_keywords_dict(string_to_list(e.event_keywords)))
+
+    return end_list
 
 def check_email(email, check_deliv):
     boolean_email_msg_return = []
@@ -604,6 +666,13 @@ def check_for_not_active_events():
                 event.last_updated = display_posttime
 
             db.session.commit()
+
+def string_to_list(string_of_words):
+    list_of_words = []
+
+    list_of_words = list(str(string_of_words).strip("").split(","))
+
+    return list_of_words
 
 def convertto24(time_input): 
     if time_input[-2:] == "AM" and time_input[:2] == "12": 
