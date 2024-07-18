@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+
+{% block navbar_links %}
+    <div class="collapse navbar-collapse" id="navbarText">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active" style="padding-right: 20px;">
+                <div><a class="nav-link" href="{{ url_for('home') }}" style="color: coral;">Home<span class="sr-only">(current)</span></a></div>
+            </li>
+            <li class="nav-item" style="padding-right: 20px;">
+                <a class="nav-link" href="{{ url_for('organizations') }}" style="color: coral;">Organizations</a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            {% if current_user.is_authenticated %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
+                </li>
+                {% if current_user.is_organization and current_user.answered_organization_questions %}
+                        <li class="nav-item" style="padding-right: 20px;">
+                            <a class="nav-link" href="{{ url_for('dashboard') }}" style="color: coral; border-bottom: solid; border-bottom-color: coral;">Dashboard</a>
+                        </li>
+                    <li class="nav-item dropdown" style="padding-right: 20px;">
+                        <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Post
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="{{ url_for('post') }}">Create New Post</a>
+                            <a class="dropdown-item" href="{{ url_for('view_posts') }}">View Your Posts</a>
+                        </div>
+                    </li>
+                {% endif %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('logout') }}" style="color: coral;">Logout</a>
+                </li>
+            {% else %}
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('register') }}" style="color: coral;">Register</a>
+                </li>
+                <li class="nav-item" style="padding-right: 20px;">
+                    <a class="nav-link" href="{{ url_for('login') }}" style="color: coral;">Login</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+{% endblock navbar_links %}
+
+{% block main %}
+
+<style>
+    #check {
+        display: none;
+    }
+
+    .content {
+        display: none;
+        transition: 0.5s linear;
+    }
+
+    label {
+        display: inline-block;
+        border-bottom: 1px solid;
+        cursor: pointer;
+        font-weight: 400;
+    }
+
+    #check:checked ~ .content {
+        display: block;
+    }
+
+    #check:checked ~ div label {
+        visibility: hidden;
+    }
+
+    #check:checked ~ div label:after {
+        content: '<<< Hide Security Code';
+        display: block;
+        visibility: visible;
+        border-bottom: 1px solid;
+    }
+</style>
+
+    <div class="container" style="padding-bottom: 150px; padding-top: 40px;">
+        <div>
+            <h2 style="color: coral;" class="text-center">Organization Dashboard</h2>
+            <hr>
+
+            <div class="text-center border-bottom" style="padding: 20px;">
+                <div class="row">
+                    <div class="col-md-4">
+                        <img src="{{ organization_obj.image }}" class="card-img-top" style="width: 100%; height: 15vw; object-fit: cover;">
+                    </div>
+                    <div class="col-md-8">
+                        <p class="h5">Your Organization Security Code</p>
+                        <div style="padding: 20px;">
+                            <input type="checkbox" id="check">
+                            <div class="content text-center">
+                                {{ organization_obj.security_code }}
+                            </div>
+                            <div class="text-center">
+                                <label for="check" class="text-primary">Show Security Code >>></label>
+                            </div>
+                            <small>
+                                This security code can be used to give other users administrative abilities in your organization. 
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            {% if all_events != [] %}
+
+                {% for event in all_events %}
+                    
+                    <div style="padding: 20px;">
+                            <div class="row justify-content-center border p-3 border-success border-3 rounded">
+                                <div class="col-md-5">
+                                    <img src="{{ event.event_img }}" class="card-img-top border border-dark rounded" style="width: 100%; height: 16vw; object-fit: cover;">
+                                </div>
+                                <div class="col-md-7">
+                                    <p>
+                                        <span class="h5">{{ event.event_name }}</span><br>
+                                        <span>
+                                            <small>
+                                                {{ event.event_location }}
+                                            </small>
+                                        </span>
+                                        <hr>
+                                        <span><b>Event Time:</b><br>{{ event.for_display_event_datetime }}</span>
+                                    </p>
+                                    <p style="padding-top: 15px;">
+                                        <b>Authorized Admins:</b>
+                                        <ul>
+                                            {% for admin in authorized_admins %}
+                                                {% if admin.id == current_user.id %}
+                                                    <span style="display: inline-block;"><li>{{ admin.full_name }}</li></span> <span class="text-primary" style="display: inline-block;">(You)</span>
+                                                {% else %}
+                                                    <li>{{ admin.full_name }}</li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="row justify-content-center border border-top-0 p-3 border-success border-3 rounded">
+                                <div class="col-md-12">
+                                    <span class="h5">Registrees</span><br><hr>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+                
+                <div class="text-center" style="padding-top: 20px; padding-bottom: 20px;">
+                    <p class="h6 p-3 mb-2 text-dark border border-primary">You have not created any events yet to be displayed here. Click <a href="{{ url_for('post') }}">here</a> to create a new event.</p>
+                    <div><hr></div>
+                </div>
+
+            {% endif %}
+        </div>
+    </div>
+
+{% endblock main %}

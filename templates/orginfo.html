@@ -16,6 +16,9 @@
                     <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
                 </li>
                 {% if current_user.is_organization and current_user.answered_organization_questions %}
+                    <li class="nav-item" style="padding-right: 20px;">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}" style="color: coral;">Dashboard</a>
+                    </li>
                     <li class="nav-item dropdown" style="padding-right: 20px;">
                         <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Post
@@ -43,7 +46,7 @@
 
 {% block main %}
     
-    <div class="container" style="padding-bottom: 100px; padding-top: 60px;">
+    <div class="container" style="padding-bottom: 100px; padding-top: 40px;">
         <div class="row">
             <div class="col-md-12">
                 <div class="text-center">
@@ -53,6 +56,14 @@
                 <div class="text-center text-muted" style="padding: 20px;">
                     {{ page_intro_msg }}
                 </div>
+                {% if current_user.answered_organization_questions == False %}
+                    <div style="padding-top: 50px; padding-bottom: 20px;">
+                        <div class="border border-primary p-3 mb-2 text-center">
+                            <p>If you belong to an already created organization, you may join it by providing a code from the original administrator by clicking the button below.</p>
+                            <a class="btn btn-primary" href="{{ url_for('join_organization') }}">Join Existing Organization</a>
+                        </div>
+                    </div>
+                    {% endif %}
                 <div style="padding-top: 50px;">
                     <form method="POST" action="" enctype="multipart/form-data">
                         {{ form.hidden_tag() }}

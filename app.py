@@ -12,7 +12,9 @@ from fuzzywuzzy import fuzz, process
 import secrets
 import os
 from PIL import Image
-from random import choice
+from random import choice, randint
+import math
+from scripts import check_organization_status
 
 db = SQLAlchemy()
 
@@ -110,7 +112,6 @@ def register():
             db.session.commit()
             login_user(Client.query.filter_by(email=user_email).first())
             if user_is_organization == True:
-                random_hex = secrets.token_hex(16)
                 flash("Your account has been created. Please fill out the following information about your organization.", "info")
                 return redirect(url_for("orginfo", user_id=new_user.id))
             else:
@@ -129,7 +130,7 @@ def orginfo(user_id):
     if user_obj.is_authenticated == True:
 
         if user_obj.answered_organization_questions == False:
-            page_intro_msg = "Please answer the following questions about your organization."
+            page_intro_msg = "To create your organization, please answer the following questions regarding it."
 
             if request.method == "POST":
                 if form.validate_on_submit():
@@ -140,7 +141,7 @@ def orginfo(user_id):
                         flash("Please provide a valid image that represents your organization (image of organization headquarters, organization logo, etc.).", "warning")
                         return redirect(url_for("orginfo", user_id=current_user.id))
 
-                    new_org_info_obj = Organization(organization_name=form.organization_name.data, primary_location= form.primary_location.data, mission_statement= form.mission_statement.data, email_contact= form.email_contact.data, phonenumber_contact= form.phonenumber_contact.data, website_link= form.website_link.data, image=picture_file)
+                    new_org_info_obj = Organization(organization_name=form.organization_name.data, primary_location= form.primary_location.data, mission_statement= form.mission_statement.data, email_contact= form.email_contact.data, phonenumber_contact= form.phonenumber_contact.data, website_link= form.website_link.data, image=picture_file, security_code=str(get_random_code()))
                     db.session.add(new_org_info_obj)
                     db.session.commit()
                     current_user.answered_organization_questions = True
@@ -189,6 +190,30 @@ def orginfo(user_id):
     else:
         flash("You must be an organization administrator to access this page.", "warning")
         return redirect(url_for("home"))
+
+@app.route("/join_organization", methods=["GET", "POST"])
+@login_required
+def join_organization():
+    form = JoinExistingOrganizationForm()
+    org_objs = Organization.query.all()
+
+    if request.method == "POST":
+        if form.validate_on_submit():
+            user_code = form.code.data
+
+            for org in org_objs:
+                if str(org.security_code) == str(user_code):
+                    current_user.is_organization = True
+                    current_user.answered_organization_questions = True
+                    current_user.organization_id = org.id
+                    list(org.administrators).append(current_user)
+                    db.session.commit()
+
+                    flash(f"Your code has matched the following organization: {org.organization_name}. You are now an administrator for that organization.", "success")
+                    return redirect(url_for("dashboard"))
+                
+
+    return render_template("join_organization.html", form=form)
 
 @app.route("/account", methods=["GET", "POST"])
 @login_required
@@ -259,9 +284,8 @@ def organizations():
 @app.route("/post", methods=["GET", "POST"])
 @login_required
 def post():
-    if current_user.answered_organization_questions == False:
-        flash("You are not an administrator for an organization yet. Please fill out information regarding your organization first.", "warning")
-        return redirect(url_for("orginfo", user_id=current_user.id))
+    if check_organization_status():
+        pass
 
     form = CreateNewPostForm()
 
@@ -273,8 +297,18 @@ def post():
         return render_template("post.html", form=form, current_date=current_date_output, current_time=current_time)
     
     else:
+        if form.event_img.data:
+            picture_file = save_picture(form.event_img.data)
+            picture_file = f"{app.root_path[51:]}\static\images\{picture_file}"
+        else:
+            flash("Please provide a valid image that represents your event (image of venue, organization logo, etc.).", "warning")
+            return redirect(url_for("post", user_id=current_user.id))
+        
         current_post_time = datetime.now().strftime("%I:%M:%S %p")
         current_post_date = date.today().strftime("%b %d, %Y")
+
+        print(form.event_img.data)
+        print(picture_file)
 
         if (request.form.get("post_startdate") == "" or request.form.get("post_startdate") == None) or (request.form.get("post_enddate") == "" or request.form.get("post_enddate") == None) or (request.form.get("post_starttime") == "" or request.form.get("post_starttime") == None) or (request.form.get("post_endtime") == "" or request.form.get("post_endtime") == None):
             flash("Please enter a valid start/end date/time. Try again.", "warning")
@@ -283,7 +317,7 @@ def post():
             flash(f"You may enter a max of only 6 keywords. You gave {len(string_to_list(form.keywords.data))}.", "warning")
             return redirect(url_for("post"))
         else:
-            new_event = Event(event_name=form.name.data, event_startdate=request.form.get("post_startdate"), event_enddate=request.form.get("post_enddate"), event_starttime=request.form.get("post_starttime"), event_endtime=request.form.get("post_endtime"), event_location=form.location.data, event_max_volunteers=form.max_volunteers.data, event_min_age=form.age_min.data, event_max_age=form.age_max.data, event_category=form.category.data, event_description=form.description.data, event_keywords=form.keywords.data, post_date=current_post_date, post_time=current_post_time, organization_id=current_user.organization_id)
+            new_event = Event(event_name=form.name.data, event_startdate=request.form.get("post_startdate"), event_enddate=request.form.get("post_enddate"), event_starttime=request.form.get("post_starttime"), event_endtime=request.form.get("post_endtime"), event_location=form.location.data, event_max_volunteers=form.max_volunteers.data, event_min_age=form.age_min.data, event_max_age=form.age_max.data, event_category=form.category.data, event_description=form.description.data, event_keywords=form.keywords.data, event_img=picture_file, post_date=current_post_date, post_time=current_post_time, organization_id=current_user.organization_id)
             db.session.add(new_event)
             db.session.commit()
             flash("Event has been successfully posted.", "success")
@@ -292,9 +326,8 @@ def post():
 @app.route("/view_posts", methods=["GET", "POST"])
 @login_required
 def view_posts():
-    if current_user.answered_organization_questions == False:
-        flash("You are not an administrator for an organization yet. Please fill out information regarding your organization first.", "warning")
-        return redirect(url_for("orginfo", user_id=current_user.id))
+    if check_organization_status():
+        pass
 
     check_for_not_active_events()
 
@@ -302,29 +335,60 @@ def view_posts():
     inactive_events = []
     list_of_keywords_dicts = get_all_keywords_dicts()
 
-    form = EditPostBtn()
+    editbtnform = EditPostBtn()
+    deletebtnform = DeletePostBtn()
 
-    for i in Event.query.filter_by(id=current_user.organization_id, is_active=True).all():
+    for i in Event.query.filter_by(organization_id=current_user.organization_id, is_active=True).all():
         active_events.append(i)
 
-    for j in Event.query.filter_by(id= current_user.organization_id, is_active=False).all():
+    for j in Event.query.filter_by(organization_id=current_user.organization_id, is_active=False).all():
         inactive_events.append(j)
 
     if request.method == "POST":
-        post_id = request.form.get("edit_post_btn")
-        return redirect(url_for("edit_post", post_id=post_id))
+        if request.form.get("edit_post_btn"):
+            edit_post_id = request.form.get("edit_post_btn")
+            return redirect(url_for("edit_post", edit_post_id=edit_post_id))
+        if request.form.get("delete_post_btn"):
+            delete_post_id = request.form.get("delete_post_btn")
+            return redirect(url_for("delete_post", delete_post_id=delete_post_id))
 
-    return render_template("view_posts.html", active_events=active_events, inactive_events=inactive_events, editbtnform=form, list_of_keywords_dicts=list_of_keywords_dicts)
+    return render_template("view_posts.html", active_events=active_events, inactive_events=inactive_events, editbtnform=editbtnform, list_of_keywords_dicts=list_of_keywords_dicts, deletebtnform=deletebtnform)
 
-@app.route("/edit_post/<post_id>", methods=["GET", "POST"])
+@app.route("/dashboard", methods=["GET", "POST"])
 @login_required
-def edit_post(post_id):
-    if current_user.answered_organization_questions == False:
-        flash("You are not an administrator for an organization yet. Please fill out information regarding your organization first.", "warning")
-        return redirect(url_for("orginfo", user_id=current_user.id))
+def dashboard():
+    if check_organization_status():
+        pass
+
+    organization_obj = Organization.query.filter_by(id=current_user.organization_id).first()
+    all_events = Event.query.filter_by(organization_id=current_user.organization_id).all()
+    authorized_admins = organization_obj.administrators
+
+    print(all_events)
+
+    return render_template("dashboard.html", all_events=all_events, authorized_admins=authorized_admins, len=len, organization_obj=organization_obj)
+
+@app.route("/delete_post/<delete_post_id>")
+@login_required
+def delete_post(delete_post_id):
+    if check_organization_status():
+        pass
+
+    post_obj = Event.query.filter_by(id=delete_post_id).first()
+    db.session.delete(post_obj)
+    db.session.commit()
+
+    flash(f"{post_obj.event_name} has been successfully deleted.", "success")
+    return redirect(url_for("home"))
+
+@app.route("/edit_post/<edit_post_id>", methods=["GET", "POST"])
+@login_required
+def edit_post(edit_post_id):
+    if check_organization_status():
+        pass
     
     form = EditPostForm()
-    post_obj = Event.query.filter_by(id=post_id).first()
+    post_obj = Event.query.filter_by(id=edit_post_id).first()
 
     if request.method == "GET":
         form.name.data = post_obj.event_name
@@ -357,6 +421,11 @@ def edit_post(post_id):
         else:
             post_obj.event_keywords = form.keywords.data
 
+        if form.event_img.data == None:
+            post_obj.event_img = post_obj.event_img
+        else:
+            post_obj.event_img = f"{app.root_path[51:]}\static\images\{save_picture(form.event_img.data)}"
+
         post_obj.last_updated = str(datetime.now().date().strftime("%b %d, %Y")) + " at " + str(datetime.now().time().strftime("%I:%M:%S %p"))
 
         db.session.commit()
@@ -383,6 +452,7 @@ class Client(db.Model, UserMixin):
 
     answered_organization_questions = db.Column(db.Boolean, default=False)
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
+    event_registered_for = db.Column(db.Integer, db.ForeignKey('event.id'))
     
     def __repr__(self):
         output = ""
@@ -403,6 +473,7 @@ class Organization(db.Model, UserMixin):
     phonenumber_contact = db.Column(db.String(120), default=None)
     website_link = db.Column(db.String(120), default=None)
     image = db.Column(db.String(120), default="default_organization.jpg")
+    security_code = db.Column(db.String(120), default=None)
 
     administrators = db.relationship("Client", backref="administrator")
     events = db.relationship("Event", backref="event")
@@ -426,6 +497,7 @@ class Event(db.Model, UserMixin):
     event_description = db.Column(db.String(120))
     event_age_range = db.Column(db.String(120))
     event_keywords = db.Column(db.String(620))
+    event_img = db.Column(db.String(620))
 
     post_date = db.Column(db.String(120))
     post_time = db.Column(db.String(120))
@@ -434,11 +506,12 @@ class Event(db.Model, UserMixin):
     for_display_post_datetime = db.Column(db.String(120))
     days_until_event = db.Column(db.String(120))
     last_updated = db.Column(db.String(120))
-
+    
+    registrees = db.relationship("Client", backref="registrees")
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
 
     def __repr__(self):
-        return f"\n\nPost Information:\n{self.event_name},\n{self.event_startdate} to {self.event_enddate},\n{self.event_starttime} to {self.event_endtime},\n{self.event_location},\n{self.event_ideal_num_of_volunteers},\n{self.event_category},\n{self.event_description}\n\n Metadata:\nCreated: {self.post_date}, {self.post_time}\nOrganized By: {Client.query.filter_by(id=self.organizer_id).first()}\n\n\n"
+        return f"\n\n{self.event_name}: Organization ID: {self.organization_id}\n\n"
 
 class LoginForm(FlaskForm):
     email = EmailField("Email", validators=[InputRequired()])
@@ -460,6 +533,11 @@ class UpdateAccountForm(FlaskForm):
 
     submit = SubmitField("Save")
 
+class JoinExistingOrganizationForm(FlaskForm):
+    code = StringField("Organization Security Code:", validators=[InputRequired()])
+
+    submit = SubmitField("Submit")
+
 class CreateNewPostForm(FlaskForm):
     name = StringField("Event Name:", validators=[InputRequired()])
     startdate = StringField("Event Start Date:", validators=[InputRequired()])
@@ -473,6 +551,7 @@ class CreateNewPostForm(FlaskForm):
     category = SelectField("Category:", choices=list(["Pick a category..."] + event_categories))
     description = TextAreaField("Brief Description:", validators=[InputRequired()])
     keywords = StringField("Keywords (each separated by a comma):", validators=[InputRequired()])
+    event_img = FileField("Event Image:", validators=[FileAllowed(['jpg', 'png'])])
 
     submit = SubmitField("Save")
 
@@ -483,6 +562,10 @@ class CreateNewPostForm(FlaskForm):
 class EditPostBtn(FlaskForm):
 
     editbtn = SubmitField("Edit")
+
+class DeletePostBtn(FlaskForm):
+
+    deletebtn = SubmitField("Delete")
 
 class EditPostForm(FlaskForm):
     name = StringField("Event Name:", validators=[InputRequired()])
@@ -497,6 +580,7 @@ class EditPostForm(FlaskForm):
     category = SelectField("Category:", choices=list(["Pick a category..."] + event_categories))
     description = TextAreaField("Brief Description:", validators=[InputRequired()])
     keywords = StringField("Keywords (each separated by a comma):", validators=[InputRequired()])
+    event_img = FileField("Event Image:", validators=[FileAllowed(['jpg', 'png'])])
 
     submit = SubmitField("Save")
 
@@ -515,9 +599,14 @@ class OrganizationInforForm(FlaskForm):
     email_contact = StringField("Email:", validators=[InputRequired()])
     phonenumber_contact = StringField("Phone Number:", validators=[InputRequired()])
     website_link = StringField("Link to Website Homepage:", validators=[InputRequired()])
-    org_image = FileField("Organization Image:", validators=[FileAllowed(['jpg', 'png'])])
+    org_image = FileField("Organization Image:", validators=[FileAllowed(['jpg', 'png']), InputRequired()])
 
     submit = SubmitField("Save")
+
+def get_random_code(n=6):
+    range_start = 10**(n-1)
+    range_end = (10**n)-1
+    return randint(range_start, range_end)
 
 def save_picture(form_picture):
     random_hex = secrets.token_hex(8)

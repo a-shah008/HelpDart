@@ -15,7 +15,10 @@
                 <li class="nav-item active" style="padding-right: 20px;">
                     <div style="border-bottom: solid; border-bottom-color: coral;"><a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account<span class="sr-only">(current)</span></a></div>
                 </li>
-                {% if current_user.is_organization  and current_user.answered_organization_questions %}
+                {% if current_user.is_organization and current_user.answered_organization_questions %}
+                    <li class="nav-item" style="padding-right: 20px;">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}" style="color: coral;">Dashboard</a>
+                    </li>
                     <li class="nav-item dropdown" style="padding-right: 20px;">
                         <a style="color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Post
@@ -130,7 +133,7 @@
                                 <div class="card-body">
                                     <span class="h5" style="padding-top: 10px; padding-right: 20px;">{{ user_organization_obj.organization_name }}</span><span><small class="text-muted">{{ user_organization_obj.primary_location }}</small></span>
                                     <p class="card-text" style="padding-top: 10px;">{{ user_organization_obj.email_contact }} <b>|</b> {{ user_organization_obj.phonenumber_contact }}</p>
-                                    <p class="card-text" style="padding-top: 10px;">Mission Statement: {{ user_organization_obj.mission_statement }}</p>                     
+                                    <p class="card-text" style="padding-top: 10px;"><b>Mission Statement:</b> {{ user_organization_obj.mission_statement }}</p>                     
                                     <p class="card-text" style="padding-top: 10px;">Website Link: <a href="{{ user_organization_obj.website_link }}" target="_blank">{{ user_organization_obj.website_link }}</a></p>                     
                                     <form method="POST" action="" enctype="multipart/form-data">
                                         <span style="padding-right: 15px;">

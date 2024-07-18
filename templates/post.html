@@ -16,6 +16,9 @@
                     <a class="nav-link" href="{{ url_for('account') }}" style="color: coral;">Account</a>
                 </li>
                 {% if current_user.is_organization and current_user.answered_organization_questions %}
+                    <li class="nav-item" style="padding-right: 20px;">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}" style="color: coral;">Dashboard</a>
+                    </li>
                     <li class="nav-item dropdown" style="padding-right: 20px;">
                         <a style="border-bottom: solid; border-bottom-color: coral; color: coral;" class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             Post
@@ -215,8 +218,21 @@
                             {{ form.keywords(class="form-control form-control-lg") }}
                         {% endif %}
                         <small>
-                            <span>These are words that further describe your event for potential volunteers to easily find your event based on their interests.</span>
+                            <span>These are words or 2-to-3-word phrases that further describe your event for potential volunteers to easily find your event based on their interests.</span>
                         </small>
+                    </div>
+                    <div class="form-group">
+                        {{ form.event_img.label() }}
+                        {{ form.event_img(class="form-control-file") }}
+                        {% if form.event_img.errors %}
+                            {% for error in form.event_img.errors %}
+                                <br>   
+                                <span class="text-danger">{{ error }}</span></br>
+                            {% endfor %}
+                        {% endif %}
+                        <div style="padding-top: 5px;">
+                            <small>This is a valid image that represents your event (image of venue, organization logo, etc.).</small>
+                        </div>
                     </div>
                 </fieldset>
                 <div class="form-group">
