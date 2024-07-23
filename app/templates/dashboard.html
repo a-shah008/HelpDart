@@ -108,18 +108,34 @@
                 
             </div>
 
+            <div class="text-center" style="padding-top: 30px;">
+                <p class="h5">View Signups for Events</p><hr>
+            </div>
+
             {% if all_events != [] %}
 
                 {% for event in all_events %}
                     
                     <div style="padding: 20px;">
+                        {% if event.is_active %}
                             <div class="row justify-content-center border p-3 border-success border-3 rounded">
+                        {% else %}
+                            <div class="row justify-content-center border p-3 border-warning border-3 rounded">
+                        {% endif %}
                                 <div class="col-md-5">
                                     <img src="{{ event.event_img }}" class="card-img-top border border-dark rounded" style="width: 100%; height: 16vw; object-fit: cover;">
                                 </div>
                                 <div class="col-md-7">
                                     <p>
-                                        <span class="h5">{{ event.event_name }}</span><br>
+                                        <span class="h5">{{ event.event_name }}</span>
+                                        <span style="padding-left: 20px;">
+                                            {% if event.is_active %}
+                                                <small class="text-success"><b>Active</b></small>
+                                            {% else %}
+                                                <small class="text-warning"><b>Inactive</b></small>
+                                            {% endif %}
+                                        </span>
+                                        <br>
                                         <span>
                                             <small>
                                                 {{ event.event_location }}
@@ -142,9 +158,22 @@
                                     </p>
                                 </div>
                             </div>
-                            <div class="row justify-content-center border border-top-0 p-3 border-success border-3 rounded">
+                            {% if event.is_active %}
+                                <div class="row justify-content-center border border-top-0 p-3 border-success border-3 rounded">
+                            {% else %}
+                                <div class="row justify-content-center border border-top-0 p-3 border-warning border-3 rounded">
+                            {% endif %}
                                 <div class="col-md-12">
                                     <span class="h5">Registrees</span><br><hr>
+                                    {% if event.registrees == [] %}
+                                        <span>There are currently no registrees for this event. Please check back later.</span>
+                                    {% else %}
+                                        <ul>
+                                            {% for r in event.registrees %}
+                                                <li>{{ r.full_name }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

@@ -56,6 +56,10 @@
                         {% endif %}
                     </div>
                     <div class="form-group">
+                        {{ form.date_of_birth.label(class="form-control-label") }}<br>
+                        <input id="dob" name="dob" type="date" value=""/>
+                    </div>
+                    <div class="form-group">
                         {{ form.email.label(class="form-control-label") }}
                         {% if form.email.errors %}
                             {{ form.email(class="form-control form-control-lg is-invalid") }}

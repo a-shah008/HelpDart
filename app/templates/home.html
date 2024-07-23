@@ -75,19 +75,58 @@
                         </div>
                         <div class="card-body">
                             <h5 class="card-title">{{ event.event_name }}</h5>
-                            <p class="card-text">{{ event.event_category }}</p>
-                            <p class="card-text" style="padding: 10px;"><b style="padding-right: 10px;">{{ event.for_display_event_datetime }}</b><br><span class="text-success" style="padding-left: 10px;">{{ event.days_until_event }} days until event</span></p>
+                            <p class="card-text">
+                                {{ event.event_category }} | {{ event.event_min_age }} to {{ event.event_max_age }} yrs old
+                            </p>
+                            <p class="card-text" style="padding: 10px;"><b style="padding-right: 10px;">{{ event.for_display_event_datetime }}</b><br><span class="text-success">{{ event.days_until_event }} days until event</span></p>
                         </div>
-                        <div class="card-footer">
-                            {% if current_user.is_organization == False %}
-                                <div style="padding-right: 20px; padding-left: 10px;">
-                                    <form method="POST" action="" enctype="multipart/form-data">
-                                        <input id="signupforeventbtn" name="signupforeventbtn" type="hidden" value="{{ event.id }}">
-                                        {{ sign_up_form.signup(class="btn btn-success") }}
-                                    </form>
-                                </div>
-                            {% endif %}
-                        </div>
+                        {% if current_user.is_authenticated %}
+                            <div class="card-footer">
+                                {% if current_user.is_organization == False %}
+                                    {% if current_user in event.registrees %}
+                                        <div style="padding-right: 20px; padding-left: 10px;">
+                                            <form method="POST" action="" enctype="multipart/form-data">
+                                                <input id="removefromeventbtn" name="removefromeventbtn" type="hidden" value="{{ event.id }}">
+                                                <button class="btn btn-danger">Remove Myself</button>
+                                            </form>
+                                        </div>
+                                    {% else %}
+                                        <div style="padding-right: 20px; padding-left: 10px;">
+                                            <form method="POST" action="" enctype="multipart/form-data">
+                                                <input id="signupforeventbtn" name="signupforeventbtn" type="hidden" value="{{ event.id }}">
+                                                {{ sign_up_form.signup(class="btn btn-success") }}
+                                            </form>
+                                        </div>
+                                    {% endif %}
+                                        
+                                {% elif event.organization_id == current_user.organization_id %}
+                                    <div class="row">
+                                        <div class="col-md-3"></div>
+                                        <div class="col-md-6">
+                                            <a class="btn btn-primary" href="{{ url_for('dashboard') }}">View on Dashboard</a>
+                                        </div>
+                                        <div class="col-md-3"></div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer">
+                                {% if current_user in event.registrees %}
+                                    <span class="text-success">You have already signed up for this event.</span>
+                                {% else %}
+                                    {% if int(event.event_max_volunteers) - len(event.registrees) >= (int(event.event_max_volunteers))/2 %}
+                                        <span class="text-success">{{ int(event.event_max_volunteers) - len(event.registrees) }} open spots</span>
+                                    {% elif int(event.event_max_volunteers) - len(event.registrees) <= (int(event.event_max_volunteers)) * 0.82 %}
+                                        <span class="text-danger">{{ int(event.event_max_volunteers) - len(event.registrees) }} open spots</span>
+                                    {% else %}
+                                        <span class="text-warning">{{ int(event.event_max_volunteers) - len(event.registrees) }} open spots</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="card-footer">
+                                <span class="text-muted">You must be logged in to sign up for events.</span>
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}

@@ -142,9 +142,6 @@
                                         <span style="padding-right: 15px;">
                                             <input type="submit" class="btn btn-warning" id="remove_from_organization" name="remove_from_organization" value="Remove Myself from this Organization">
                                         </span>
-                                        <span>
-                                            <input type="submit" class="btn btn-danger" id="delete_organization" name="delete_organization" value="Delete Organization">
-                                        </span>
                                     </form>
                                 </div>
                             </div>
@@ -167,6 +164,12 @@
                     <hr>
                 </div>
                 <p class="text-warning">You still need to fill out information regarding your organization. Click <a href="{{ url_for('orginfo', user_id=current_user.id) }}" target="_blank">here</a> to complete.</p>
+            {% elif current_user.is_organization == False and current_user.answered_organization_questions == False %}
+
+            <span class="h4">Organizations</span><br>
+            <span><small>You are not currently part of any organizations or registered as an administrative account.</small></span><br>
+            <div style="padding-top: 20px;"><a style="color: white;" class="btn btn-primary" href="{{ url_for('join_organization') }}">Join Existing Organization</a></div>
+            <span><small>If you are part of an organization, you may join an already created one by clicking the button above and entering the security code given to other registered administrator(s) of your organization</small></span>
             {% endif %}
         {% endif %}
     </div>
