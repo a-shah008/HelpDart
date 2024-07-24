@@ -10,6 +10,7 @@ from email_validator import validate_email, EmailNotValidError
 import bcrypt
 import os
 
+
 def get_badge_colors():
     badge_colors = ["bg-primary", "bg-secondary", "bg-success", "bg-warning", "bg-info", "bg-danger"]
     return badge_colors
